@@ -1,0 +1,63 @@
+[gd_scene load_steps=2 format=3 uid="uid://c3j1644e7wkte"]
+
+[ext_resource type="Script" path="res://scripts/ui/MainMenu.cs" id="1_5hbrh"]
+
+[node name="Scene" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+metadata/_edit_horizontal_guides_ = [-57.0]
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="MainMenu" type="PanelContainer" parent="CanvasLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 415.0
+offset_top = 160.0
+offset_right = -415.0
+offset_bottom = -278.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_5hbrh")
+metadata/_edit_group_ = true
+
+[node name="MarginContainer" type="MarginContainer" parent="CanvasLayer/MainMenu"]
+layout_mode = 2
+theme_override_constants/margin_left = 15
+theme_override_constants/margin_top = 15
+theme_override_constants/margin_right = 15
+theme_override_constants/margin_bottom = 15
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/MainMenu/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 15
+
+[node name="MainMenuLabel" type="Label" parent="CanvasLayer/MainMenu/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Main Menu"
+horizontal_alignment = 1
+
+[node name="HostButton" type="Button" parent="CanvasLayer/MainMenu/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Host"
+
+[node name="JoinButton" type="Button" parent="CanvasLayer/MainMenu/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Join"
+
+[node name="AddressText" type="LineEdit" parent="CanvasLayer/MainMenu/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "localhost"
+placeholder_text = "localhost"
+alignment = 1
+
+[node name="PortText" type="LineEdit" parent="CanvasLayer/MainMenu/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "5042"
+placeholder_text = "port"
+alignment = 1

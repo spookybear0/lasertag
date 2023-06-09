@@ -1,0 +1,159 @@
+[gd_scene load_steps=13 format=3 uid="uid://dipwkce3lur2i"]
+
+[ext_resource type="Script" path="res://scripts/Player.cs" id="1_pniju"]
+[ext_resource type="PackedScene" uid="uid://d00mmoichg0bj" path="res://assets/pistol.blend" id="3_0xi3j"]
+[ext_resource type="PackedScene" uid="uid://cjlpydjili8l8" path="res://objects/laser.tscn" id="4_rsv4t"]
+[ext_resource type="PackedScene" uid="uid://dm52b6fiq00xx" path="res://objects/sm5player.tscn" id="4_t2vuq"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_pigw0"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_hovw7"]
+
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_tnmlg"]
+properties/0/path = NodePath(".:position")
+properties/0/spawn = true
+properties/0/sync = true
+properties/1/path = NodePath(".:rotation")
+properties/1/spawn = true
+properties/1/sync = true
+properties/2/path = NodePath(".:multiplayerId")
+properties/2/spawn = true
+properties/2/sync = false
+properties/3/path = NodePath("Camera:rotation")
+properties/3/spawn = true
+properties/3/sync = true
+properties/4/path = NodePath("SM5Player:role")
+properties/4/spawn = true
+properties/4/sync = true
+properties/5/path = NodePath("SM5Player:team")
+properties/5/spawn = true
+properties/5/sync = true
+
+[sub_resource type="Animation" id="Animation_hc6uv"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Camera/Pistol:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(0.364, -0.161, -0.354)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Camera/Pistol:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(0, 0.0698132, 0)]
+}
+
+[sub_resource type="Animation" id="Animation_jc8bg"]
+resource_name = "idle"
+length = 3.0
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Camera/Pistol:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 1.5),
+"transitions": PackedFloat32Array(-2, -2),
+"update": 0,
+"values": [Vector3(0.364, -0.161, -0.354), Vector3(0.364, -0.197, -0.354)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Camera/Pistol:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 1.5),
+"transitions": PackedFloat32Array(-2, -2),
+"update": 0,
+"values": [Vector3(0, 0.0698132, 0), Vector3(-0.122173, 0.0698132, 0)]
+}
+
+[sub_resource type="Animation" id="Animation_4gggr"]
+resource_name = "move"
+loop_mode = 1
+step = 0.25
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Camera/Pistol:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.25, 0.5, 0.75),
+"transitions": PackedFloat32Array(0.5, 2, 0.5, 2),
+"update": 0,
+"values": [Vector3(0.364, -0.197, -0.354), Vector3(0.298523, -0.148258, -0.354), Vector3(0.364, -0.197, -0.354), Vector3(0.423429, -0.158296, -0.354)]
+}
+
+[sub_resource type="Animation" id="Animation_hfg3d"]
+resource_name = "shoot"
+length = 0.1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = false
+tracks/0/path = NodePath("Camera/Pistol:rotation")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.4),
+"transitions": PackedFloat32Array(0.5, 1),
+"update": 0,
+"values": [Vector3(0.0872665, 0.0698132, 0), Vector3(0, 0.0698132, 0)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_tw7e0"]
+_data = {
+"RESET": SubResource("Animation_hc6uv"),
+"idle": SubResource("Animation_jc8bg"),
+"move": SubResource("Animation_4gggr"),
+"shoot": SubResource("Animation_hfg3d")
+}
+
+[node name="Player" type="CharacterBody3D"]
+collision_layer = 2
+script = ExtResource("1_pniju")
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.68, -0.421)
+
+[node name="Pistol" parent="Camera" instance=ExtResource("3_0xi3j")]
+transform = Transform3D(0.997564, 0, 0.0697565, 0, 1, 0, -0.0697565, 0, 0.997564, 0.364, -0.161, -0.354)
+
+[node name="Laser" parent="Camera/Pistol" instance=ExtResource("4_rsv4t")]
+transform = Transform3D(0.999999, 3.72529e-08, -2.4203e-10, 0, 0.0114239, 0.999934, 0, -0.999934, 0.0114239, -0.000124991, 0.0575522, -0.0178601)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("CapsuleMesh_pigw0")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("CapsuleShape3D_hovw7")
+
+[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
+replication_config = SubResource("SceneReplicationConfig_tnmlg")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+autoplay = "idle"
+libraries = {
+"": SubResource("AnimationLibrary_tw7e0")
+}
+
+[node name="SM5Player" parent="." instance=ExtResource("4_t2vuq")]
+
+[editable path="SM5Player"]

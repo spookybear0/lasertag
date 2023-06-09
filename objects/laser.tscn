@@ -1,0 +1,27 @@
+[gd_scene load_steps=3 format=3 uid="uid://cjlpydjili8l8"]
+
+[ext_resource type="Script" path="res://scripts/Laser.cs" id="1_ykfgr"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8xmai"]
+albedo_color = Color(1, 0, 0, 1)
+
+[node name="Laser" type="Node3D"]
+script = ExtResource("1_ykfgr")
+
+[node name="RayCast3D" type="RayCast3D" parent="."]
+target_position = Vector3(0, 200, 0)
+collision_mask = 3
+
+[node name="Combiner" type="CSGCombiner3D" parent="."]
+snap = 0.0011
+
+[node name="CSGCylinder3D" type="CSGCylinder3D" parent="Combiner"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 100, 0)
+radius = 0.01
+height = 200.0
+material = SubResource("StandardMaterial3D_8xmai")
+
+[node name="LaserMask" type="CSGBox3D" parent="Combiner"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 200, 0)
+operation = 2
+size = Vector3(0.368, 0.01, 0.327)

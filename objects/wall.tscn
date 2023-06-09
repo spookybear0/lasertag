@@ -1,0 +1,22 @@
+[gd_scene load_steps=5 format=3 uid="uid://cpstfw5kbioay"]
+
+[ext_resource type="Texture2D" uid="uid://dy5gafgajhl8k" path="res://addons/kenney_prototype_textures/dark/texture_13.png" id="1_og6dy"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hrcx1"]
+albedo_texture = ExtResource("1_og6dy")
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_mtsak"]
+material = SubResource("StandardMaterial3D_hrcx1")
+size = Vector2(50, 80)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_rvejl"]
+size = Vector3(50, 0.01, 80)
+
+[node name="Wall" type="MeshInstance3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.38992, -0.223334)
+mesh = SubResource("PlaneMesh_mtsak")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="."]
+
+[node name="Collision" type="CollisionShape3D" parent="StaticBody3D"]
+shape = SubResource("BoxShape3D_rvejl")
