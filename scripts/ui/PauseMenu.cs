@@ -75,7 +75,8 @@ public partial class PauseMenu : PanelContainer {
 		GetParent<CanvasLayer>().Visible = false;
 		MouseFilter = MouseFilterEnum.Ignore;
 
-		player.setMouseCapture(true);
+		if (player != null)
+			player.setMouseCapture(true);
 	}
 
 	public void OnSensitivityTextChanged(string newText) {

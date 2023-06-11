@@ -5,13 +5,17 @@ public partial class Player : CharacterBody3D {
 	public const float speed = 6f;
 	public const float speedWhileJumping = 4f;
 	public const float jumpVelocity = 6f;
-	public float gravity = 20f;//ProjectSettings.GetSetting("physics/3d/default_gravity").AsSingle();
+	public float gravity = 20f;
 	public float sensitivity = 1f;
+	public float shotDelay = 0.2f;
 
 	public SM5Player sm5Player;
+	public SM5Game sm5Game;
 
 	[Export]
 	public int multiplayerId;
+	[Export]
+	public string playerName;
 
 	private Camera3D camera;
 	private AnimationPlayer animationPlayer;
@@ -19,26 +23,65 @@ public partial class Player : CharacterBody3D {
 	private bool canShoot = true;
 	private Laser laser;
 	private PanelContainer pauseMenu;
+	private Label3D nameLabel;
+	private Sprite3D roleIcon;
+	private MeshInstance3D mesh;
+	private DirectionalLight3D flashlight;
+
+	// materials
+	private Material earthMaterial;
+	private Material earthDownedMaterial;
+	private Material fireMaterial;
+	private Material fireDownedMaterial;
 
 	public override void _EnterTree() {
 		multiplayerId = Name.ToString().Replace("Player", "").ToInt();
 		SetMultiplayerAuthority(multiplayerId);
+
+		// sm5 player stuff
+
+		sm5Player = GetNode<SM5Player>("SM5Player");
+		sm5Player.SetMultiplayerAuthority(multiplayerId);
 	}
 
 	public override void _Ready() {
+		nameLabel = GetNode<Label3D>("AboveHead/NameLabel");
+		roleIcon = GetNode<Sprite3D>("AboveHead/RoleIcon");
+		mesh = GetNode<MeshInstance3D>("MeshInstance3D");
+		flashlight = GetNode<DirectionalLight3D>("Camera/Pistol/Flashlight");
+		sm5Game = GameManager.Instance.gameController;
+
+		sm5Game.players.Add(this);
+
+		playerName = GameManager.Instance.playerName;
+		nameLabel.Text = playerName;
+
+		roleIcon.Texture = GD.Load<Texture2D>("res://assets/roles/" + sm5Player.role.ToString().ToLower() + "_big.png");
+
+		GameManager.Instance.players.Add(this);
+
+
+		sm5Player = GetNode<SM5Player>("SM5Player");
+		// lambda
+		sm5Player.roleBehavior.OnDowned += () => { Rpc("OnDowned"); };
+		sm5Player.roleBehavior.OnRespawned += () => { Rpc("OnRespawned"); };
+
 		// animation stuff
 
 		animationPlayer = GetNode<AnimationPlayer>("AnimationPlayer");
 		animationPlayer.AnimationFinished += AnimationFinished;
 
+		// setup materials
+
+		earthMaterial = GD.Load<Material>("res://assets/materials/earth.tres");
+		earthDownedMaterial = GD.Load<Material>("res://assets/materials/earth_downed.tres");
+		fireMaterial = GD.Load<Material>("res://assets/materials/fire.tres");
+		fireDownedMaterial = GD.Load<Material>("res://assets/materials/fire_downed.tres");
+
 		// laser stuff
 
 		laser = GetNode<Laser>("Camera/Pistol/Laser");
 		laser.Visible = false;
-
-		// sm5 player stuff
-
-		sm5Player = GetNode<SM5Player>("SM5Player");
 
 		// close menu by default for all players (INCLUDING SERVER)
 		GameManager.Instance.inMenu = false;
@@ -53,11 +96,26 @@ public partial class Player : CharacterBody3D {
 			return;
 		}
 
+		Position = GetNode<Marker3D>("/root/Scene/RedBaseSpawn").GlobalTransform.Origin;
+
 		GameManager.Instance.localPlayer = this;
 
+		// camera and cull mask
+		// allows us to not see text above our head
+		// but still see other player's text
+
 		camera = GetNode<Camera3D>("Camera");
-		
 		camera.MakeCurrent();
+
+		// cull mask
+
+		nameLabel.SetLayerMaskValue(1, false);
+		nameLabel.SetLayerMaskValue(3, true);
+		roleIcon.SetLayerMaskValue(1, false);
+		roleIcon.SetLayerMaskValue(3, true);
+
+		// mouse capture
+
 		setMouseCapture(true);
 	}
 
@@ -79,8 +137,33 @@ public partial class Player : CharacterBody3D {
 			camera.Rotation = new Vector3(Mathf.Clamp(camera.Rotation.X, -Mathf.Pi / 2, Mathf.Pi / 2), camera.Rotation.Y, camera.Rotation.Z);
 		}
 
-		if (Input.IsActionJustPressed("shoot") && canShoot) {
-			GD.Print("shoot");
+		// not using rapid fire, so we have to press the button every time
+		// rapid fire is handled in _Process for holding down the button
+		if (!sm5Player.roleBehavior.rapidFireEnabled && Input.IsActionJustPressed("shoot")
+			&& canShoot && !sm5Player.roleBehavior.downed && !GameManager.Instance.inMenu) {
+			Shoot();
+		}
+
+		// flashlight
+
+		if (Input.IsActionJustPressed("flashlight") && !GameManager.Instance.inMenu) {
+			flashlight.Visible = !flashlight.Visible;
+		}
+
+		// ability
+
+		if (Input.IsActionJustPressed("ability") && !sm5Player.roleBehavior.downed && !GameManager.Instance.inMenu) {
+			sm5Player.roleBehavior.UseSpecial();
+		}
+	}
+
+	public override void _Process(double delta) {
+		if (!IsMultiplayerAuthority())
+			return;
+
+		// check if using rapid fire, if so, we can hold down the shoot button
+		if (sm5Player.roleBehavior.rapidFireEnabled && Input.IsActionPressed("shoot") 
+			&& canShoot && !sm5Player.roleBehavior.downed && !GameManager.Instance.inMenu) {
 			Shoot();
 		}
 	}
@@ -133,16 +216,21 @@ public partial class Player : CharacterBody3D {
 	}
 
 	public void Shoot() {
+		if (sm5Player.roleBehavior.shots <= 0)
+			return; // no shots
+
 		Rpc("playShootEffects");
 
 		// shoot delay
 		shootTimer = new Godot.Timer();
-		shootTimer.WaitTime = 0.15f;
+		shootTimer.WaitTime = shotDelay;
 		shootTimer.OneShot = true;
 		shootTimer.Connect("timeout", new Callable(this, "resetShootTimer"));
 		AddChild(shootTimer);
 		shootTimer.Start();
 		canShoot = false;
+
+		sm5Player.roleBehavior.Shoot();
 
 		// raycast
 
@@ -150,8 +238,7 @@ public partial class Player : CharacterBody3D {
 		if (collider != null) {
 			Player other = collider as Player;
 			if (other != null) {
-				sm5Player.roleBehavior.RpcId(multiplayerId, "Zap", sm5Player.roleBehavior);
-				//other.sm5Player.roleBehavior.Zap(sm5Player.roleBehavior);
+				sm5Player.roleBehavior.Zap(other.sm5Player.roleBehavior);
 			}
 		}
 	}
@@ -175,5 +262,66 @@ public partial class Player : CharacterBody3D {
 			animationPlayer.Play("idle");
 			laser.Visible = false;
 		}
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal=true)]
+	public void OnRoleUpdate(int roleInt) {
+		Role role = (Role)roleInt;
+		roleIcon.Texture = GD.Load<Texture2D>("res://assets/roles/" + role.ToString().ToLower() + "_big.png");
+
+		shotDelay = sm5Player.roleBehavior.shotDelay;
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal=true)]
+	public void OnTeamUpdate(int teamInt) {
+		Team oldTeam = sm5Player.team;
+
+		Team team = (Team)teamInt;
+
+		if (oldTeam == Team.Fire) {
+			sm5Game.firePlayers.Remove(this);
+		}
+		else if (oldTeam == Team.Earth) {
+			sm5Game.earthPlayers.Remove(this);
+		}
+
+		if (team == Team.Fire) {
+			if (sm5Player.roleBehavior.downed) {
+				mesh.MaterialOverride = fireDownedMaterial;
+			}
+			else {
+				mesh.MaterialOverride = fireMaterial;
+			}
+			sm5Game.firePlayers.Add(this);
+		}
+		else if (team == Team.Earth) {
+			if (sm5Player.roleBehavior.downed) {
+				mesh.MaterialOverride = earthDownedMaterial;
+			}
+			else {
+				mesh.MaterialOverride = earthMaterial;
+			}
+			sm5Game.earthPlayers.Add(this);
+		}
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal=true)]
+	public void OnDowned() {
+		if (sm5Player.team == Team.Fire) {
+			mesh.MaterialOverride = fireDownedMaterial;
+		}
+		else if (sm5Player.team == Team.Earth) {
+			mesh.MaterialOverride = earthDownedMaterial;
+		}
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal=true)]
+	public void OnRespawned() {
+		if (sm5Player.team == Team.Fire) {
+			mesh.MaterialOverride = fireMaterial;
+		}
+		else if (sm5Player.team == Team.Earth) {
+			mesh.MaterialOverride = earthMaterial;
+		}	
 	}
 }

@@ -5,90 +5,294 @@ using System;
 // bases
 // specials
 
-public abstract partial class RoleBehavior : Node3D {
-    [Export]
-    public abstract bool downed { get; set; }
-    [Export]
-    public abstract bool dead { get; set; }
+public partial class RoleBehavior : Node3D {
+    // other stuff
+
+    Timer downedTimer;
+    Timer downedSafeTimer;
+
+    // base will be scout will update later
+    // dynamic will change
+
+    private int _hitPoints = 1;
+    private int _shots = 30;
+    private int _missiles = 5;
+    private int _lives = 15;
+    private int _score = 0;
+    private int _specialPoints = 0;
+    private Team _team = Team.None;
 
     [Export]
-    public abstract int shotPower { get; set; }
+    public bool downed { get; set; }
     [Export]
-    public abstract int initialHitPoints { get; set; }
+    public bool dead { get; set; }
     [Export]
-    public abstract int hitPoints { get; set; }
+    public bool safe { get; set; } // from first 4 seconds of downed
+    [Export]
+    public bool downFromShotResub { get; set; }
+    [Export]
+    public bool downFromLifeResub { get; set; }
 
     [Export]
-    public abstract int shotsInitial { get; set; }
-    [Export]
-    public abstract int shotsResupply { get; set; }
-    [Export]
-    public abstract int shotsMax { get; set; }
-    [Export]
-    public abstract int shots { get; set; }
+    public float shotDelay { get; set; }
 
     [Export]
-    public abstract int missilesInitial { get; set; }
+    public int shotPower { get; set; }
     [Export]
-    public abstract int missiles { get; set; }
-
+    public int initialHitPoints { get; set; }
     [Export]
-    public abstract int livesInitial { get; set; }
-    [Export]
-    public abstract int livesResupply { get; set; }
-    [Export]
-    public abstract int livesMax { get; set; }
-    [Export]
-    public abstract int lives { get; set; }
-
-    [Export]
-    public abstract int score { get; set; }
-    [Export]
-    public abstract int specialPoints { get; set; }
-    [Export]
-    public abstract Team team { get; set; }
-
-    public virtual void ResupplyShots(RoleBehavior other) {
-        // default does nothing since we aren't ammo
+    public int hitPoints {
+        get {
+            return _hitPoints;
+        }
+        set {
+            _hitPoints = value;
+            if (!IsMultiplayerAuthority()) return;
+            GameManager.Instance.hud.roleHitpoints.Text = value.ToString() + "/" + initialHitPoints.ToString();
+        }
     }
 
-    public virtual void OnResupplyShots(RoleBehavior other) { // getting resupplied
+    [Export]
+    public int shotsInitial { get; set; }
+    [Export]
+    public int shotsResupply { get; set; }
+    [Export]
+    public int shotsMax { get; set; }
+    [Export]
+    public int shots {
+        get {
+            return _shots;
+        }
+        set {
+            _shots = value;
+            if (!IsMultiplayerAuthority()) return;
+            GameManager.Instance.hud.shotsValue.Text = value.ToString();
+        }
+    }
+
+    [Export]
+    public int missilesInitial { get; set; }
+    [Export]
+    public int missiles {
+        get {
+            return _missiles;
+        }
+        set {
+            _missiles = value;
+            if (!IsMultiplayerAuthority()) return;
+            GameManager.Instance.hud.missilesValue.Text = value.ToString();
+        }
+    }
+
+    [Export]
+    public int livesInitial { get; set; }
+    [Export]
+    public int livesResupply { get; set; }
+    [Export]
+    public int livesMax { get; set; }
+    [Export]
+    public int lives {
+        get {
+            return _lives;
+        }
+        set {
+            _lives = value;
+            if (!IsMultiplayerAuthority()) return;
+            GameManager.Instance.hud.livesValue.Text = value.ToString();
+        }
+    }
+
+    [Export]
+    public int score {
+        get {
+            return _score;
+        }
+        set {
+            _score = value;
+            if (!IsMultiplayerAuthority()) return;
+            GameManager.Instance.hud.scoreValue.Text = value.ToString();
+        }
+    }
+    [Export]
+    public int specialPoints {
+        get {
+            return _specialPoints;
+        }
+        set {
+            _specialPoints = value;
+            if (value > 99) {
+                _specialPoints = 99;
+            }
+            if (!IsMultiplayerAuthority()) return;
+            GameManager.Instance.hud.specialsValue.Text = _specialPoints.ToString();
+        }
+    }
+    [Export]
+    public Team team {
+        get {
+            return _team;
+        }
+        set {
+            _team = value;
+            if (!IsMultiplayerAuthority()) return;
+            GameManager.Instance.hud.teamLabel.Text = value.ToString() + " Team";
+        }
+    }
+    // default to scout
+    // wont be used in UI, handled by SM5Player
+    [Export]
+    public Role role { get; set; } = Role.Scout; 
+
+    [Export]
+    public long multiplayerId { get; set; }
+
+    
+    // role/ability specific stuff
+
+    [Export]
+    public int specialAbilityCost { get; set; }
+
+    [Export]
+    public bool rapidFireEnabled { get; set; }
+    
+    public void Shoot() {
+        if (role != Role.Ammo)
+            shots -= 1;
+        
+        if (shots <= 0) {
+            shots = 0;
+            return;
+        }
+    }
+
+    private void Down() {
+        if (downed) {
+            downedTimer.Stop();
+        }
+
+        downed = true;
+
+        downedTimer = new Timer();
+        downedTimer.WaitTime = 8;
+        downedTimer.OneShot = true;
+        downedTimer.Connect("timeout", new Callable(this, "DownedTimerTimeout"));
+        AddChild(downedTimer);
+        downedTimer.Start();
+
+        safe = true;
+
+        downedSafeTimer = new Timer();
+        downedSafeTimer.WaitTime = 4;
+        downedSafeTimer.OneShot = true;
+        downedSafeTimer.Connect("timeout", new Callable(this, "DownedSafeTimerTimeout"));
+        AddChild(downedSafeTimer);
+        downedSafeTimer.Start();
+
+        EmitSignal(SignalName.OnDowned);
+    }
+
+    private void DownedTimerTimeout() {
+        downed = false;
+        downFromShotResub = false;
+        downFromLifeResub = false;
+        hitPoints = initialHitPoints;
+
+        EmitSignal(SignalName.OnRespawned);
+    }
+
+    private void DownedSafeTimerTimeout() {
+        safe = false;
+    }
+
+    public void ResupplyShots(RoleBehavior other) {
+        if (!other.downed) {
+            other.RpcId(other.multiplayerId, "OnResupplyShots", multiplayerId);
+        }
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer)] // TODO: make anticheat
+    public void OnResupplyShots(long mId) { // getting resupplied
+        RoleBehavior other = RoleBehaviorFromMultiplayerId(mId);
+
         shots += shotsResupply;
         if (shots > shotsMax) {
             shots = shotsMax;
         }
+        
+        downFromShotResub = true;
+        rapidFireEnabled = false;
     }
 
-    public virtual void ResupplyLives(RoleBehavior other) {
-        // default does nothing since we aren't medic
+    private void ResupplyLives(RoleBehavior other) {
+        if (!other.downed) {
+            other.RpcId(other.multiplayerId, "OnResupplyLives", multiplayerId);
+        }
     }
 
-    public virtual void OnResupplyLives(RoleBehavior other) { // getting resupplied
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer)] // TODO: make anticheat
+    public void OnResupplyLives(long mId) { // getting resupplied
+        RoleBehavior other = RoleBehaviorFromMultiplayerId(mId);
+
         lives += livesResupply;
         if (lives > livesMax) {
             lives = livesMax;
         }
+
+        downFromLifeResub = true;
+        rapidFireEnabled = false;
     }
 
-    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal=true)]
-    public virtual void Zap(RoleBehavior other) { // shoot them
-        other.OnZapped(this);
+    public void Zap(RoleBehavior other) { // shoot them
+        if (other.downed && other.safe) {
+            return; // first 4 seconds of downed, safe
+        }
+
+        // check if resupplying
+        // check if downed, has to be fully up to get resupplied
+        // allow doubles by checking if they are downed from a resupply
+        if (team == other.team && (role == Role.Ammo || role == Role.Medic)) {
+            if (other.downed && other.safe) {
+                if (role == Role.Ammo && other.downFromLifeResub) {
+                    ResupplyShots(other);
+                }
+                else if (role == Role.Medic && other.downFromShotResub) {
+                    ResupplyLives(other);
+                }
+            }
+            else {
+                if (role == Role.Ammo) {
+                    ResupplyShots(other);
+                }
+                else if (role == Role.Medic) {
+                    ResupplyLives(other);
+                }
+            }
+            return;
+        }
+
+        other.RpcId(other.multiplayerId, "OnZapped", multiplayerId);
+        if (team == other.team) {
+            score -= 100;
+        }
+        else {
+            score += 100;
+            specialPoints += 1;
+        }
     }
 
-    public virtual void OnZapped(RoleBehavior other) { // when we get shot
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer)] // TODO: make anticheat
+    public void OnZapped(long mId) { // when we get shot
+        RoleBehavior other = RoleBehaviorFromMultiplayerId(mId);
+
         hitPoints -= other.shotPower;
         if (hitPoints <= 0) {
             hitPoints = 0;
-            downed = true;
+            Down();
             lives--;
+            if (lives < 0) {
+                lives = 0;
+            }
             score -= 20;
-            if (team == other.team) {
-                other.score -= 100;
-            }
-            else {
-                other.score += 100;
-                other.specialPoints += 1;
-            }
             
             if (lives <= 0) {
                 dead = true;
@@ -96,17 +300,23 @@ public abstract partial class RoleBehavior : Node3D {
         }
     }
 
-    public virtual void Missile(RoleBehavior other) {
-        other.OnMissiled(this);
+    public void Missile(RoleBehavior other) {
+        if (missiles > 0) {
+            other.RpcId(other.multiplayerId, "OnMissiled", multiplayerId);
+            missiles--;
+
+            score += 500;
+            specialPoints += 2;
+        }
     }
 
-    public virtual void OnMissiled(RoleBehavior other) {
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer)] // TODO: make anticheat
+    public void OnMissiled(long mId) {
+        RoleBehavior other = RoleBehaviorFromMultiplayerId(mId);
         // remove two lives instantly
         lives -= 2;
-        downed = true;
+        Down();
 
-        other.score += 500;
-        other.specialPoints += 2;
         score -= 100;
 
         if (lives <= 0) {
@@ -114,605 +324,180 @@ public abstract partial class RoleBehavior : Node3D {
         }
     }
 
-    public abstract void UseSpecial();
-}
-
-// commander
-
-public partial class CommanderBehavior : RoleBehavior {
-    private int _hitPoints = 3; // dynamic will change
-    private int _shots = 30; // dynamic will change
-    private int _missiles = 5; // dynamic will change
-    private int _lives = 15; // dynamic will change
-    private int _score = 0; // dynamic will change
-    private int _specialPoints = 0; // dynamic will change
-    private Team _team = Team.None; // dynamic will change
-
-    // normal fields
-
-    [Export]
-    public override bool downed { get; set; } = false;
-    [Export]
-    public override bool dead { get; set; } = false;
-
-    [Export]
-    public override int shotPower { get; set; } = 2;
-    [Export]
-    public override int initialHitPoints { get; set; } = 3;
-    [Export]
-    public override int hitPoints {
-        get {
-            return _hitPoints;
+    public void UseSpecial() {
+        if (specialPoints < specialAbilityCost) {
+            return;
         }
-        set {
-            _hitPoints = value;
-            GameManager.Instance.hud.roleHitpoints.Text = value.ToString() + "/" + initialHitPoints.ToString();
+
+        switch (role) {
+            case Role.Ammo: {
+                ShotBoost();
+                break;
+            }
+            case Role.Medic: {
+                LifeBoost();
+                break;
+            }
+            case Role.Commander: {
+                Nuke();
+                break;
+            }
+            case Role.Scout: {
+                RapidFire();
+                break;
+            }
+            // heavy has none
+        }
+
+        // subtract the cost
+        specialPoints -= specialAbilityCost;
+    }
+
+    // TODO: implement specials
+    private void ShotBoost() {
+
+    }
+
+    private void LifeBoost() {
+
+    }
+
+    private void Nuke() {
+
+    }
+
+    private void RapidFire() {
+        rapidFireEnabled = true;
+        shotDelay = 0.05f;
+    }
+
+    public override void _Ready() {
+        UpdateRoleSpecificFields(role);
+        dead = false;
+        downed = false;
+        safe = false;
+        rapidFireEnabled = false;
+        downFromShotResub = false;
+        downFromLifeResub = false;
+    }
+
+    public void UpdateRoleSpecificFields(Role newRole) {
+        role = newRole;
+
+        switch (newRole) {
+            case Role.Commander: {
+                shotDelay = 0.25f;
+                shotPower = 2;
+                initialHitPoints = 3;
+                hitPoints = 3;
+                shotsInitial = 30;
+                shotsResupply = 5;
+                shotsMax = 60;
+                shots = 30;
+                missilesInitial = 5;
+                missiles = 5;
+                livesInitial = 15;
+                livesResupply = 4;
+                livesMax = 30;
+                lives = 15;
+                specialAbilityCost = 20;
+                break;
+            }
+            case Role.Heavy: {
+                shotDelay = 0.35f;
+                shotPower = 3;
+                initialHitPoints = 3;
+                hitPoints = 3;
+                shotsInitial = 20;
+                shotsResupply = 5;
+                shotsMax = 40;
+                shots = 20;
+                missilesInitial = 5;
+                missiles = 5;
+                livesInitial = 10;
+                livesResupply = 3;
+                livesMax = 20;
+                lives = 10;
+                specialAbilityCost = 0;
+                break;
+            }
+            default: { // Role.Scout
+                shotDelay = 0.2f;
+                shotPower = 1;
+                initialHitPoints = 1;
+                hitPoints = 1;
+                shotsInitial = 30;
+                shotsResupply = 10;
+                shotsMax = 60;
+                shots = 30;
+                missilesInitial = 0;
+                missiles = 0;
+                livesInitial = 15;
+                livesResupply = 5;
+                livesMax = 30;
+                lives = 15;
+                specialAbilityCost = 15;
+                break;
+            }
+            case Role.Ammo: {
+                shotDelay = 0.2f;
+                shotPower = 1;
+                initialHitPoints = 1;
+                hitPoints = 1;
+                shotsInitial = 15;
+                shotsResupply = 0;
+                shotsMax = 15;
+                shots = 15;
+                missilesInitial = 0;
+                missiles = 0;
+                livesInitial = 10;
+                livesResupply = 3;
+                livesMax = 20;
+                lives = 10;
+                specialAbilityCost = 15;
+                break;
+            }
+            case Role.Medic: {
+                shotDelay = 0.2f;
+                shotPower = 1;
+                initialHitPoints = 1;
+                hitPoints = 1;
+                shotsInitial = 15;
+                shotsResupply = 5;
+                shotsMax = 30;
+                shots = 15;
+                missilesInitial = 0;
+                missiles = 0;
+                livesInitial = 20;
+                livesResupply = 0;
+                livesMax = 20;
+                lives = 20;
+                specialAbilityCost = 10;
+                break;
+            }
         }
     }
 
-    [Export]
-    public override int shotsInitial { get; set; } = 30;
-    [Export]
-    public override int shotsResupply { get; set; } = 5;
-    [Export]
-    public override int shotsMax { get; set; } = 60;
-    [Export]
-    public override int shots {
-        get {
-            return _shots;
-        }
-        set {
-            _shots = value;
-            GameManager.Instance.hud.shotsValue.Text = value.ToString();
-        }
+    private RoleBehavior RoleBehaviorFromMultiplayerId(long mId) {
+        return GetNode<RoleBehavior>("/root/Scene/Player" + mId.ToString() + "/SM5Player/RoleBehavior");
     }
 
-    [Export]
-    public override int missilesInitial { get; set; } = 5;
-    [Export]
-    public override int missiles {
-        get {
-            return _missiles;
-        }
-        set {
-            _missiles = value;
-            GameManager.Instance.hud.missilesValue.Text = value.ToString();
-        }
-    }
+    // only downed and respawned are implemented so far
 
-    [Export]
-    public override int livesInitial { get; set; } = 15;
-    [Export]
-    public override int livesResupply { get; set; } = 5;
-    [Export]
-    public override int livesMax { get; set; } = 30;
-    [Export]
-    public override int lives {
-        get {
-            return _lives;
-        }
-        set {
-            _lives = value;
-            GameManager.Instance.hud.livesValue.Text = value.ToString();
-        }
-    }
-
-    [Export]
-    public override int score {
-        get {
-            return _score;
-        }
-        set {
-            _score = value;
-            GameManager.Instance.hud.scoreValue.Text = value.ToString();
-        }
-    }
-    [Export]
-    public override int specialPoints {
-        get {
-            return _specialPoints;
-        }
-        set {
-            _specialPoints = value;
-            GameManager.Instance.hud.specialsValue.Text = value.ToString();
-        }
-    }
-    [Export]
-    public override Team team {
-        get {
-            return _team;
-        }
-        set {
-            _team = value;
-            GameManager.Instance.hud.teamLabel.Text = value.ToString() + " Team";
-        }
-    }
-
-    public override void UseSpecial() {
-        // TODO: nuke
-    }
-}
-
-// heavy
-
-public partial class HeavyBehavior : RoleBehavior {
-    private int _hitPoints = 3; // dynamic will change
-    private int _shots = 20; // dynamic will change
-    private int _missiles = 5; // dynamic will change
-    private int _lives = 10; // dynamic will change
-    private int _score = 0; // dynamic will change
-    private int _specialPoints = 0; // dynamic will change
-    private Team _team = Team.None; // dynamic will change
-
-    // normal fields
-
-    [Export]
-    public override bool downed { get; set; } = false;
-    [Export]
-    public override bool dead { get; set; } = false;
-
-    [Export]
-    public override int shotPower { get; set; } = 3;
-    [Export]
-    public override int initialHitPoints { get; set; } = 3;
-    [Export]
-    public override int hitPoints {
-        get {
-            return _hitPoints;
-        }
-        set {
-            _hitPoints = value;
-            GameManager.Instance.hud.roleHitpoints.Text = value.ToString() + "/" + initialHitPoints.ToString();
-        }
-    }
-
-    [Export]
-    public override int shotsInitial { get; set; } = 20;
-    [Export]
-    public override int shotsResupply { get; set; } = 5;
-    [Export]
-    public override int shotsMax { get; set; } = 40;
-    [Export]
-    public override int shots {
-        get {
-            return _shots;
-        }
-        set {
-            _shots = value;
-            GameManager.Instance.hud.shotsValue.Text = value.ToString();
-        }
-    }
-
-    [Export]
-    public override int missilesInitial { get; set; } = 5;
-    [Export]
-    public override int missiles {
-        get {
-            return _missiles;
-        }
-        set {
-            _missiles = value;
-            GameManager.Instance.hud.missilesValue.Text = value.ToString();
-        }
-    }
-
-    [Export]
-    public override int livesInitial { get; set; } = 10;
-    [Export]
-    public override int livesResupply { get; set; } = 3;
-    [Export]
-    public override int livesMax { get; set; } = 20;
-    [Export]
-    public override int lives {
-        get {
-            return _lives;
-        }
-        set {
-            _lives = value;
-            GameManager.Instance.hud.livesValue.Text = value.ToString();
-        }
-    }
-
-    [Export]
-    public override int score {
-        get {
-            return _score;
-        }
-        set {
-            _score = value;
-            GameManager.Instance.hud.scoreValue.Text = value.ToString();
-        }
-    }
-    [Export]
-    public override int specialPoints {
-        get {
-            return _specialPoints;
-        }
-        set {
-            _specialPoints = value;
-            GameManager.Instance.hud.specialsValue.Text = value.ToString();
-        }
-    }
-    [Export]
-    public override Team team {
-        get {
-            return _team;
-        }
-        set {
-            _team = value;
-            GameManager.Instance.hud.teamLabel.Text = value.ToString() + " Team";
-        }
-    }
-
-    public override void UseSpecial() {
-        // none
-    }
-}
-
-// scout
-
-public partial class ScoutBehavior : RoleBehavior {
-    private int _hitPoints = 1; // dynamic will change
-    private int _shots = 30; // dynamic will change
-    private int _missiles = 0; // dynamic will change
-    private int _lives = 15; // dynamic will change
-    private int _score = 0; // dynamic will change
-    private int _specialPoints = 0; // dynamic will change
-    private Team _team = Team.None; // dynamic will change
-
-    [Export]
-    public override bool downed { get; set; } = false;
-    [Export]
-    public override bool dead { get; set; } = false;
-
-    [Export]
-    public override int shotPower { get; set; } = 1;
-    [Export]
-    public override int initialHitPoints { get; set; } = 1;
-    [Export]
-    public override int hitPoints {
-        get {
-            return _hitPoints;
-        }
-        set {
-            _hitPoints = value;
-            GameManager.Instance.hud.roleHitpoints.Text = value.ToString() + "/" + initialHitPoints.ToString();
-        }
-    }
-
-    [Export]
-    public override int shotsInitial { get; set; } = 30;
-    [Export]
-    public override int shotsResupply { get; set; } = 10;
-    [Export]
-    public override int shotsMax { get; set; } = 60;
-    [Export]
-    public override int shots {
-        get {
-            return _shots;
-        }
-        set {
-            _shots = value;
-            GameManager.Instance.hud.shotsValue.Text = value.ToString();
-        }
-    }
-    
-    [Export]
-    public override int missilesInitial { get; set; } = 0;
-    [Export]
-    public override int missiles {
-        get {
-            return _missiles;
-        }
-        set {
-            _missiles = value;
-            GameManager.Instance.hud.missilesValue.Text = value.ToString();
-        }
-    }
-
-    [Export]
-    public override int livesInitial { get; set; } = 15;
-    [Export]
-    public override int livesResupply { get; set; } = 5;
-    [Export]
-    public override int livesMax { get; set; } = 30;
-    [Export]
-    public override int lives {
-        get {
-            return _lives;
-        }
-        set {
-            _lives = value;
-            GameManager.Instance.hud.livesValue.Text = value.ToString();
-        }
-    }
-
-    [Export]
-    public override int score {
-        get {
-            return _score;
-        }
-        set {
-            _score = value;
-            GameManager.Instance.hud.scoreValue.Text = value.ToString();
-        }
-    }
-    [Export]
-    public override int specialPoints {
-        get {
-            return _specialPoints;
-        }
-        set {
-            _specialPoints = value;
-            GameManager.Instance.hud.specialsValue.Text = value.ToString();
-        }
-    }
-    [Export]
-    public override Team team {
-        get {
-            return _team;
-        }
-        set {
-            _team = value;
-            GameManager.Instance.hud.teamLabel.Text = value.ToString() + " Team";
-        }
-    }
-
-    public override void UseSpecial() {
-        // TODO: rapid fire
-    }
-}
-
-// ammo
-
-public partial class AmmoBehavior : RoleBehavior {
-    private int _hitPoints = 1; // dynamic will change
-    private int _shots = 15; // dynamic will change
-    private int _missiles = 0; // dynamic will change
-    private int _lives = 10; // dynamic will change
-    private int _score = 0; // dynamic will change
-    private int _specialPoints = 0; // dynamic will change
-    private Team _team = Team.None; // dynamic will change
-
-    [Export]
-    public override bool downed { get; set; } = false;
-    [Export]
-    public override bool dead { get; set; } = false;
-
-    [Export]
-    public override int shotPower { get; set; } = 1;
-    [Export]
-    public override int initialHitPoints { get; set; } = 1;
-    [Export]
-    public override int hitPoints {
-        get {
-            return _hitPoints;
-        }
-        set {
-            _hitPoints = value;
-            GameManager.Instance.hud.roleHitpoints.Text = value.ToString() + "/" + initialHitPoints.ToString();
-        }
-    }
-
-    [Export]
-    public override int shotsInitial { get; set; } = 15; // unlimited
-    [Export]
-    public override int shotsResupply { get; set; } = 0;
-    [Export]
-    public override int shotsMax { get; set; } = 15; // unlimited
-    [Export]
-    public override int shots {
-        get {
-            return _shots;
-        }
-        set {
-            _shots = value;
-            GameManager.Instance.hud.shotsValue.Text = value.ToString();
-        }
-    }
-
-    [Export]
-    public override int missilesInitial { get; set; } = 0;
-    [Export]
-    public override int missiles {
-        get {
-            return _missiles;
-        }
-        set {
-            _missiles = value;
-            GameManager.Instance.hud.missilesValue.Text = value.ToString();
-        }
-    }
-
-    [Export]
-    public override int livesInitial { get; set; } = 10;
-    [Export]
-    public override int livesResupply { get; set; } = 3;
-    [Export]
-    public override int livesMax { get; set; } = 20;
-    [Export]
-    public override int lives {
-        get {
-            return _lives;
-        }
-        set {
-            _lives = value;
-            GameManager.Instance.hud.livesValue.Text = value.ToString();
-        }
-    }
-
-    [Export]
-    public override int score {
-        get {
-            return _score;
-        }
-        set {
-            _score = value;
-            GameManager.Instance.hud.scoreValue.Text = value.ToString();
-        }
-    }
-    [Export]
-    public override int specialPoints {
-        get {
-            return _specialPoints;
-        }
-        set {
-            _specialPoints = value;
-            GameManager.Instance.hud.specialsValue.Text = value.ToString();
-        }
-    }
-    [Export]
-    public override Team team {
-        get {
-            return _team;
-        }
-        set {
-            _team = value;
-            GameManager.Instance.hud.teamLabel.Text = value.ToString() + " Team";
-        }
-    }
-
-    public override void ResupplyShots(RoleBehavior other) {
-        other.OnResupplyShots(this);
-    }
-
-    public override void Zap(RoleBehavior other) {
-        if (team == other.team && !other.downed && !other.dead && other.GetType() != typeof(AmmoBehavior)) {
-            other.ResupplyShots(this);
-        }
-        else {
-            other.OnZapped(this);
-        }
-    }
-
-    public override void UseSpecial() {
-        // ammo boost
-    }
-}
-
-// medic
-
-public partial class MedicBehavior : RoleBehavior {
-    private int _hitPoints = 1; // dynamic will change
-    private int _shots = 15; // dynamic will change
-    private int _missiles = 0; // dynamic will change
-    private int _lives = 20; // dynamic will change
-    private int _score = 0; // dynamic will change
-    private int _specialPoints = 0; // dynamic will change
-    private Team _team = Team.None; // dynamic will change
-
-    [Export]
-    public override bool downed { get; set; } = false;
-    [Export]
-    public override bool dead { get; set; } = false;
-
-    [Export]
-    public override int shotPower { get; set; } = 1;
-    [Export]
-    public override int initialHitPoints { get; set; } = 1;
-    [Export]
-    public override int hitPoints {
-        get {
-            return _hitPoints;
-        }
-        set {
-            _hitPoints = value;
-            GameManager.Instance.hud.roleHitpoints.Text = value.ToString() + "/" + initialHitPoints.ToString();
-        }
-    }
-
-    [Export]
-    public override int shotsInitial { get; set; } = 15;
-    [Export]
-    public override int shotsResupply { get; set; } = 5;
-    [Export]
-    public override int shotsMax { get; set; } = 30; // dynamic will change
-    [Export]
-    public override int shots {
-        get {
-            return _shots;
-        }
-        set {
-            _shots = value;
-            GameManager.Instance.hud.shotsValue.Text = value.ToString();
-        }
-    }
-
-    [Export]
-    public override int missilesInitial { get; set; } = 0;
-    [Export]
-    public override int missiles {
-        get {
-            return _missiles;
-        }
-        set {
-            _missiles = value;
-            GameManager.Instance.hud.missilesValue.Text = value.ToString();
-        }
-    }
-
-    [Export]
-    public override int livesInitial { get; set; } = 20;
-    [Export]
-    public override int livesResupply { get; set; } = 0; // cant heal self
-    [Export]
-    public override int livesMax { get; set; } = 20;
-    [Export]
-    public override int lives {
-        get {
-            return _lives;
-        }
-        set {
-            _lives = value;
-            GameManager.Instance.hud.livesValue.Text = value.ToString();
-        }
-    }
-
-    [Export]
-    public override int score {
-        get {
-            return _score;
-        }
-        set {
-            _score = value;
-            GameManager.Instance.hud.scoreValue.Text = value.ToString();
-        }
-    }
-    [Export]
-    public override int specialPoints {
-        get {
-            return _specialPoints;
-        }
-        set {
-            _specialPoints = value;
-            GameManager.Instance.hud.specialsValue.Text = value.ToString();
-        }
-    }
-    [Export]
-    public override Team team {
-        get {
-            return _team;
-        }
-        set {
-            _team = value;
-            GameManager.Instance.hud.teamLabel.Text = value.ToString() + " Team";
-        }
-    }
-
-    public override void ResupplyLives(RoleBehavior other) {
-        other.OnResupplyLives(this);
-    }
-
-    public override void Zap(RoleBehavior other) {
-        if (team == other.team && !other.downed && !other.dead && other.GetType() != typeof(MedicBehavior)) {
-            other.ResupplyLives(this);
-        }
-        else {
-            other.OnZapped(this);
-        }
-    }
-
-    public override void UseSpecial() {
-        // life boost
-    }
+    [Signal]
+    public delegate void OnDownedEventHandler();
+    [Signal]
+    public delegate void OnRespawnedEventHandler();
+    [Signal]
+    public delegate void OnZapEventHandler(RoleBehavior other); // zapping someone else
+    [Signal]
+    public delegate void OnMissileEventHandler(RoleBehavior other);
+    [Signal]
+    public delegate void OnSpecialEventHandler(); // general special
+    [Signal]
+    public delegate void OnShootEventHandler();
+    [Signal]
+    public delegate void OnGetResupplyLivesEventHandler(RoleBehavior other); // getting resupplied, not resupplying
+    [Signal]
+    public delegate void OnGetResupplyShotsEventHandler(RoleBehavior other); // getting resupplied, not resupplying
 }

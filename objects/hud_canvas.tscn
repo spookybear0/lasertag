@@ -1,0 +1,155 @@
+[gd_scene load_steps=5 format=3 uid="uid://bvi0110dqhugx"]
+
+[ext_resource type="Script" path="res://scripts/ui/Hud.cs" id="1_jbyx5"]
+[ext_resource type="Texture2D" uid="uid://dmndrbe5kb7av" path="res://assets/roles/scout_big.png" id="2_1tjm4"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0sktd"]
+bg_color = Color(0.15, 0.15, 0.15, 0.568627)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="Theme" id="Theme_r4qg6"]
+Panel/styles/panel = SubResource("StyleBoxFlat_0sktd")
+
+[node name="HudCanvas" type="CanvasLayer"]
+
+[node name="Hud" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 1
+script = ExtResource("1_jbyx5")
+
+[node name="LeftPanel" type="Panel" parent="Hud"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 53.0
+offset_top = -337.0
+offset_right = 384.0
+offset_bottom = -29.0
+grow_vertical = 0
+theme = SubResource("Theme_r4qg6")
+metadata/_edit_group_ = true
+
+[node name="Margin" type="MarginContainer" parent="Hud/LeftPanel"]
+custom_minimum_size = Vector2(331, 308)
+layout_mode = 0
+offset_right = 331.0
+offset_bottom = 308.0
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBox" type="VBoxContainer" parent="Hud/LeftPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Role" type="HBoxContainer" parent="Hud/LeftPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="Icon" type="TextureRect" parent="Hud/LeftPanel/Margin/VBox/Role"]
+layout_mode = 2
+texture = ExtResource("2_1tjm4")
+expand_mode = 2
+stretch_mode = 4
+
+[node name="Label" type="Label" parent="Hud/LeftPanel/Margin/VBox/Role"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Scout"
+
+[node name="Hitpoints" type="Label" parent="Hud/LeftPanel/Margin/VBox/Role"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "1/1"
+
+[node name="Split" type="HBoxContainer" parent="Hud/LeftPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 50
+
+[node name="Key" type="VBoxContainer" parent="Hud/LeftPanel/Margin/VBox/Split"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ScoreLabel" type="Label" parent="Hud/LeftPanel/Margin/VBox/Split/Key"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Score"
+horizontal_alignment = 1
+
+[node name="LivesLabel" type="Label" parent="Hud/LeftPanel/Margin/VBox/Split/Key"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Lives"
+horizontal_alignment = 1
+
+[node name="ShotsLabel" type="Label" parent="Hud/LeftPanel/Margin/VBox/Split/Key"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Shots"
+horizontal_alignment = 1
+
+[node name="MissilesLabel" type="Label" parent="Hud/LeftPanel/Margin/VBox/Split/Key"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Missiles"
+horizontal_alignment = 1
+
+[node name="SpecialsLabel" type="Label" parent="Hud/LeftPanel/Margin/VBox/Split/Key"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Specials"
+horizontal_alignment = 1
+
+[node name="Value" type="VBoxContainer" parent="Hud/LeftPanel/Margin/VBox/Split"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Score" type="Label" parent="Hud/LeftPanel/Margin/VBox/Split/Value"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "0"
+horizontal_alignment = 1
+
+[node name="Lives" type="Label" parent="Hud/LeftPanel/Margin/VBox/Split/Value"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "20"
+horizontal_alignment = 1
+
+[node name="Shots" type="Label" parent="Hud/LeftPanel/Margin/VBox/Split/Value"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "20
+"
+horizontal_alignment = 1
+
+[node name="Missiles" type="Label" parent="Hud/LeftPanel/Margin/VBox/Split/Value"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "5"
+horizontal_alignment = 1
+
+[node name="Specials" type="Label" parent="Hud/LeftPanel/Margin/VBox/Split/Value"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "0"
+horizontal_alignment = 1
+
+[node name="TeamLabel" type="Label" parent="Hud/LeftPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "No Team"
+horizontal_alignment = 1

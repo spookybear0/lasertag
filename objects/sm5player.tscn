@@ -1,14 +1,9 @@
 [gd_scene load_steps=3 format=3 uid="uid://dm52b6fiq00xx"]
 
 [ext_resource type="Script" path="res://scripts/sm5/SM5Player.cs" id="1_2eiuj"]
-
-[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_ja3ke"]
-properties/0/path = NodePath(".:role")
-properties/0/spawn = true
-properties/0/sync = true
+[ext_resource type="PackedScene" uid="uid://dfgv6oe3c06i" path="res://objects/role_behavior.tscn" id="2_nkh88"]
 
 [node name="SM5Player" type="Node3D"]
 script = ExtResource("1_2eiuj")
 
-[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
-replication_config = SubResource("SceneReplicationConfig_ja3ke")
+[node name="RoleBehavior" parent="." instance=ExtResource("2_nkh88")]

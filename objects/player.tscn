@@ -1,9 +1,10 @@
-[gd_scene load_steps=13 format=3 uid="uid://dipwkce3lur2i"]
+[gd_scene load_steps=14 format=3 uid="uid://dipwkce3lur2i"]
 
 [ext_resource type="Script" path="res://scripts/Player.cs" id="1_pniju"]
 [ext_resource type="PackedScene" uid="uid://d00mmoichg0bj" path="res://assets/pistol.blend" id="3_0xi3j"]
 [ext_resource type="PackedScene" uid="uid://cjlpydjili8l8" path="res://objects/laser.tscn" id="4_rsv4t"]
 [ext_resource type="PackedScene" uid="uid://dm52b6fiq00xx" path="res://objects/sm5player.tscn" id="4_t2vuq"]
+[ext_resource type="Texture2D" uid="uid://dmndrbe5kb7av" path="res://assets/roles/scout_big.png" id="5_j0ghm"]
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_pigw0"]
 
@@ -28,6 +29,81 @@ properties/4/sync = true
 properties/5/path = NodePath("SM5Player:team")
 properties/5/spawn = true
 properties/5/sync = true
+properties/6/path = NodePath("SM5Player/RoleBehavior:downed")
+properties/6/spawn = true
+properties/6/sync = true
+properties/7/path = NodePath("SM5Player/RoleBehavior:dead")
+properties/7/spawn = true
+properties/7/sync = true
+properties/8/path = NodePath("SM5Player/RoleBehavior:shotPower")
+properties/8/spawn = true
+properties/8/sync = true
+properties/9/path = NodePath("SM5Player/RoleBehavior:initialHitPoints")
+properties/9/spawn = true
+properties/9/sync = true
+properties/10/path = NodePath("SM5Player/RoleBehavior:hitPoints")
+properties/10/spawn = true
+properties/10/sync = true
+properties/11/path = NodePath("SM5Player/RoleBehavior:shotsInitial")
+properties/11/spawn = true
+properties/11/sync = true
+properties/12/path = NodePath("SM5Player/RoleBehavior:shotsResupply")
+properties/12/spawn = true
+properties/12/sync = true
+properties/13/path = NodePath("SM5Player/RoleBehavior:shotsMax")
+properties/13/spawn = true
+properties/13/sync = true
+properties/14/path = NodePath("SM5Player/RoleBehavior:shots")
+properties/14/spawn = true
+properties/14/sync = true
+properties/15/path = NodePath("SM5Player/RoleBehavior:missilesInitial")
+properties/15/spawn = true
+properties/15/sync = true
+properties/16/path = NodePath("SM5Player/RoleBehavior:missiles")
+properties/16/spawn = true
+properties/16/sync = true
+properties/17/path = NodePath("SM5Player/RoleBehavior:livesInitial")
+properties/17/spawn = true
+properties/17/sync = true
+properties/18/path = NodePath("SM5Player/RoleBehavior:livesResupply")
+properties/18/spawn = true
+properties/18/sync = true
+properties/19/path = NodePath("SM5Player/RoleBehavior:livesMax")
+properties/19/spawn = true
+properties/19/sync = true
+properties/20/path = NodePath("SM5Player/RoleBehavior:lives")
+properties/20/spawn = true
+properties/20/sync = true
+properties/21/path = NodePath("SM5Player/RoleBehavior:score")
+properties/21/spawn = true
+properties/21/sync = true
+properties/22/path = NodePath("SM5Player/RoleBehavior:specialPoints")
+properties/22/spawn = true
+properties/22/sync = true
+properties/23/path = NodePath("SM5Player/RoleBehavior:team")
+properties/23/spawn = true
+properties/23/sync = true
+properties/24/path = NodePath("SM5Player/RoleBehavior:safe")
+properties/24/spawn = true
+properties/24/sync = true
+properties/25/path = NodePath("SM5Player/RoleBehavior:downFromShotResub")
+properties/25/spawn = true
+properties/25/sync = true
+properties/26/path = NodePath("SM5Player/RoleBehavior:downFromLifeResub")
+properties/26/spawn = true
+properties/26/sync = true
+properties/27/path = NodePath("SM5Player/RoleBehavior:shotDelay")
+properties/27/spawn = true
+properties/27/sync = true
+properties/28/path = NodePath("SM5Player/RoleBehavior:rapidFireEnabled")
+properties/28/spawn = true
+properties/28/sync = true
+properties/29/path = NodePath("SM5Player/RoleBehavior:specialAbilityCost")
+properties/29/spawn = true
+properties/29/sync = true
+properties/30/path = NodePath("Camera/Pistol/Flashlight:visible")
+properties/30/spawn = true
+properties/30/sync = true
 
 [sub_resource type="Animation" id="Animation_hc6uv"]
 length = 0.001
@@ -132,12 +208,18 @@ script = ExtResource("1_pniju")
 
 [node name="Camera" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.68, -0.421)
+cull_mask = 1048571
+fov = 90.0
 
 [node name="Pistol" parent="Camera" instance=ExtResource("3_0xi3j")]
 transform = Transform3D(0.997564, 0, 0.0697565, 0, 1, 0, -0.0697565, 0, 0.997564, 0.364, -0.161, -0.354)
 
 [node name="Laser" parent="Camera/Pistol" instance=ExtResource("4_rsv4t")]
 transform = Transform3D(0.999999, 3.72529e-08, -2.4203e-10, 0, 0.0114239, 0.999934, 0, -0.999934, 0.0114239, -0.000124991, 0.0575522, -0.0178601)
+
+[node name="Flashlight" type="DirectionalLight3D" parent="Camera/Pistol"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0175357, 0.0457872, -0.266649)
+visible = false
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
 mesh = SubResource("CapsuleMesh_pigw0")
@@ -155,5 +237,20 @@ libraries = {
 }
 
 [node name="SM5Player" parent="." instance=ExtResource("4_t2vuq")]
+
+[node name="AboveHead" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.19543, 0)
+
+[node name="NameLabel" type="Label3D" parent="AboveHead"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.214, 0)
+layers = 5
+billboard = 1
+text = "Name"
+font_size = 40
+
+[node name="RoleIcon" type="Sprite3D" parent="AboveHead"]
+transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, 0, 0, 0)
+billboard = 1
+texture = ExtResource("5_j0ghm")
 
 [editable path="SM5Player"]

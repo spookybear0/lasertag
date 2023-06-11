@@ -3,7 +3,7 @@ using System;
 
 public partial class Scene : Node3D {
 	public override void _Ready() {
-		GetNode<MultiplayerManager>("MultiplayerManager").StartServerCamera();
+		GetNode<MultiplayerManager>("../MultiplayerManager").StartServerCamera();
 	}
 
 	public override void _Process(double delta) {

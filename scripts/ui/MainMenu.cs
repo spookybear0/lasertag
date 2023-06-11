@@ -6,6 +6,7 @@ public partial class MainMenu : Control {
     private Button joinButton;
     private LineEdit addressText;
     private LineEdit portText;
+    private LineEdit nameText;
     private MultiplayerManager multiplayerManager;
 
     private PackedScene mainScene;
@@ -17,6 +18,7 @@ public partial class MainMenu : Control {
         joinButton = GetNode<Button>("MarginContainer/VBoxContainer/JoinButton");
         addressText = GetNode<LineEdit>("MarginContainer/VBoxContainer/AddressText");
         portText = GetNode<LineEdit>("MarginContainer/VBoxContainer/PortText");
+        nameText = GetNode<LineEdit>("MarginContainer/VBoxContainer/NameText");
 
         multiplayerManager = GetNode<MultiplayerManager>("/root/MultiplayerManager");
 
@@ -35,6 +37,7 @@ public partial class MainMenu : Control {
     private void OnHostButtonPressed() {
         multiplayerManager.isServer = true;
         multiplayerManager.port = portText.Text.ToInt();
+        GameManager.Instance.playerName = nameText.Text;
 
         GetTree().ChangeSceneToPacked(mainScene);
         multiplayerManager.BeginMultiplayerConnection();
@@ -44,6 +47,7 @@ public partial class MainMenu : Control {
         multiplayerManager.isServer = false;
         multiplayerManager.address = addressText.Text;
         multiplayerManager.port = portText.Text.ToInt();
+        GameManager.Instance.playerName = nameText.Text;
 
         GetTree().ChangeSceneToPacked(mainScene);
         multiplayerManager.BeginMultiplayerConnection();

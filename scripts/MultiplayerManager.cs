@@ -22,6 +22,7 @@ public partial class MultiplayerManager : Node3D {
 	}
 
     public override void _Ready() {
+        instance = this;
         playerClass = (PackedScene)ResourceLoader.Load("res://objects/player.tscn");
 		peer = new ENetMultiplayerPeer();
     }
@@ -60,7 +61,7 @@ public partial class MultiplayerManager : Node3D {
         GD.Print("Peer connected: " + id);
         // Create a new player
         Player player = playerClass.Instantiate<Player>();
-        player.Position = new Vector3(0, 0, 0);
+        player.Position = GetNode<Marker3D>("/root/Scene/RedBaseSpawn").GlobalTransform.Origin;
         player.Name = "Player" + id;
         player.multiplayerId = (int)id;
 		player.SetMultiplayerAuthority((int)id);
@@ -83,6 +84,6 @@ public partial class MultiplayerManager : Node3D {
     }
 
     public void StartServerCamera() {
-        GetNode<Camera3D>("ServerCamera").MakeCurrent();
+        GetNode<Camera3D>("/root/Scene/ServerCamera").MakeCurrent();
     }
 }

@@ -1,5 +1,6 @@
 using Godot;
 using System;
+using System.Collections.Generic;
 
 public partial class GameManager : Node3D {
 	private static GameManager instance;
@@ -13,8 +14,15 @@ public partial class GameManager : Node3D {
 		}
 	}
 
+	public override void _Ready() {
+		instance = this;
+	}
+
+
 	public bool inMenu = false;
-	public SM5Game gameController = new SM5Game();
+	public SM5Game gameController;
 	public Player localPlayer;
+	public List<Player> players = new List<Player>();
+	public string playerName;
 	public Hud hud;
 }
