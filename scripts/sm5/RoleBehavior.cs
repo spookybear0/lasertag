@@ -1,5 +1,6 @@
 using Godot;
 using System;
+using System.Collections.Generic;
 
 // TODOs
 // bases
@@ -10,6 +11,9 @@ public partial class RoleBehavior : Node3D {
 
     Timer downedTimer;
     Timer downedSafeTimer;
+    Timer nukeTimer;
+
+    public Player player;
 
     // base will be scout will update later
     // dynamic will change
@@ -156,6 +160,8 @@ public partial class RoleBehavior : Node3D {
     public bool rapidFireEnabled { get; set; }
     
     public void Shoot() {
+        EmitSignal(SignalName.OnShoot);
+
         if (role != Role.Ammo)
             shots -= 1;
         
@@ -206,43 +212,54 @@ public partial class RoleBehavior : Node3D {
 
     public void ResupplyShots(RoleBehavior other) {
         if (!other.downed) {
-            other.RpcId(other.multiplayerId, "OnResupplyShots", multiplayerId);
+            other.RpcId(other.multiplayerId, "OnResupplyShots", multiplayerId, false);
         }
     }
 
-    [Rpc(MultiplayerApi.RpcMode.AnyPeer)] // TODO: make anticheat
-    public void OnResupplyShots(long mId) { // getting resupplied
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer)]
+    public void OnResupplyShots(long mId, bool specialResub) { // getting resupplied
         RoleBehavior other = RoleBehaviorFromMultiplayerId(mId);
+
+        EmitSignal(SignalName.OnGetResupplyShots, other);
 
         shots += shotsResupply;
         if (shots > shotsMax) {
             shots = shotsMax;
         }
         
-        downFromShotResub = true;
+        if (!specialResub) {
+            Down();
+            downFromShotResub = true;
+        }
         rapidFireEnabled = false;
     }
 
     private void ResupplyLives(RoleBehavior other) {
         if (!other.downed) {
-            other.RpcId(other.multiplayerId, "OnResupplyLives", multiplayerId);
+            other.RpcId(other.multiplayerId, "OnResupplyLives", multiplayerId, false);
         }
     }
 
-    [Rpc(MultiplayerApi.RpcMode.AnyPeer)] // TODO: make anticheat
-    public void OnResupplyLives(long mId) { // getting resupplied
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer)]
+    public void OnResupplyLives(long mId, bool specialResub) { // getting resupplied
         RoleBehavior other = RoleBehaviorFromMultiplayerId(mId);
+
+        EmitSignal(SignalName.OnGetResupplyLives, other);
 
         lives += livesResupply;
         if (lives > livesMax) {
             lives = livesMax;
         }
 
-        downFromLifeResub = true;
+        if (!specialResub) {
+            Down();
+            downFromLifeResub = true;
+        }
         rapidFireEnabled = false;
     }
 
     public void Zap(RoleBehavior other) { // shoot them
+        EmitSignal(SignalName.OnZap, other);
         if (other.downed && other.safe) {
             return; // first 4 seconds of downed, safe
         }
@@ -258,16 +275,17 @@ public partial class RoleBehavior : Node3D {
                 else if (role == Role.Medic && other.downFromShotResub) {
                     ResupplyLives(other);
                 }
+                return;
             }
-            else {
+            else if (!other.downed) {
                 if (role == Role.Ammo) {
                     ResupplyShots(other);
                 }
                 else if (role == Role.Medic) {
                     ResupplyLives(other);
                 }
+                return;
             }
-            return;
         }
 
         other.RpcId(other.multiplayerId, "OnZapped", multiplayerId);
@@ -280,7 +298,7 @@ public partial class RoleBehavior : Node3D {
         }
     }
 
-    [Rpc(MultiplayerApi.RpcMode.AnyPeer)] // TODO: make anticheat
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer)]
     public void OnZapped(long mId) { // when we get shot
         RoleBehavior other = RoleBehaviorFromMultiplayerId(mId);
 
@@ -301,6 +319,7 @@ public partial class RoleBehavior : Node3D {
     }
 
     public void Missile(RoleBehavior other) {
+        EmitSignal(SignalName.OnMissile, other);
         if (missiles > 0) {
             other.RpcId(other.multiplayerId, "OnMissiled", multiplayerId);
             missiles--;
@@ -310,7 +329,7 @@ public partial class RoleBehavior : Node3D {
         }
     }
 
-    [Rpc(MultiplayerApi.RpcMode.AnyPeer)] // TODO: make anticheat
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer)]
     public void OnMissiled(long mId) {
         RoleBehavior other = RoleBehaviorFromMultiplayerId(mId);
         // remove two lives instantly
@@ -324,7 +343,13 @@ public partial class RoleBehavior : Node3D {
         }
     }
 
+    public void OnNuke() {
+        lives -= 3;
+        Down();
+    }
+
     public void UseSpecial() {
+        EmitSignal(SignalName.OnSpecial);
         if (specialPoints < specialAbilityCost) {
             return;
         }
@@ -355,20 +380,107 @@ public partial class RoleBehavior : Node3D {
 
     // TODO: implement specials
     private void ShotBoost() {
+        List<Player> teamPlayers;
+        if (team == Team.Earth) {
+            teamPlayers = GameManager.Instance.gameController.earthPlayers;
+        }
+        else if (team == Team.Fire) {
+            teamPlayers = GameManager.Instance.gameController.firePlayers;
+        }
+        else {
+            GD.Print("ERROR: ShotBoost() called on invalid team");
+            return;
+        }
 
+        foreach (Player player in teamPlayers) {
+            if (player.sm5Player.role != Role.Ammo && !player.sm5Player.roleBehavior.downed) {
+                player.sm5Player.roleBehavior.RpcId(player.multiplayerId, "OnResupplyShots", multiplayerId, true);
+            }
+        }
     }
 
     private void LifeBoost() {
+        List<Player> teamPlayers;
+        if (team == Team.Earth) {
+            teamPlayers = GameManager.Instance.gameController.earthPlayers;
+        }
+        else if (team == Team.Fire) {
+            teamPlayers = GameManager.Instance.gameController.firePlayers;
+        }
+        else {
+            GD.Print("ERROR: LifeBoost() called on invalid team");
+            return;
+        }
 
+        foreach (Player player in teamPlayers) {
+            if (player.sm5Player.role != Role.Medic && !player.sm5Player.roleBehavior.downed) {
+                player.sm5Player.roleBehavior.RpcId(player.multiplayerId, "OnResupplyLives", multiplayerId, true);
+            }
+        }
     }
 
     private void Nuke() {
+        Random rand = new Random();
+        int nukeIndex = rand.Next(0, 3);
 
+        // convert index to wait time
+        double waitTime;
+        
+        switch (nukeIndex) {
+            case 0: {
+                waitTime = 3.0;
+                break;
+            }
+            case 1: {
+                waitTime = 5.0;
+                break;
+            }
+            case 2: {
+                waitTime = 7.0;
+                break;
+            }
+            default: {
+                GD.Print("ERROR: invalid nuke index");
+                return;
+            }
+        }
+
+        nukeTimer = new Timer();
+        nukeTimer.WaitTime = waitTime;
+        nukeTimer.OneShot = true;
+        nukeTimer.Connect("timeout", new Callable(this, "NukeTimeout"));
+        AddChild(nukeTimer);
+        nukeTimer.Start();
+
+        player.Rpc("StartNuking");
+    }
+
+    public void NukeTimeout() {
+
+        List<Player> teamPlayers;
+        if (team == Team.Earth) {
+            teamPlayers = GameManager.Instance.gameController.firePlayers;
+        }
+        else if (team == Team.Fire) {
+            teamPlayers = GameManager.Instance.gameController.earthPlayers;
+        }
+        else {
+            GD.Print("ERROR: NukeTimeout() called on invalid team");
+            return;
+        }
+
+        foreach (Player teamPlayer in teamPlayers) {
+            teamPlayer.RpcId(teamPlayer.multiplayerId, "OnNuked");
+        }
+
+        score += 500;
+        
+        player.Rpc("OnTeamUpdate", (int)role);
     }
 
     private void RapidFire() {
         rapidFireEnabled = true;
-        shotDelay = 0.05f;
+        shotDelay = 0.03f;
     }
 
     public override void _Ready() {
@@ -386,7 +498,7 @@ public partial class RoleBehavior : Node3D {
 
         switch (newRole) {
             case Role.Commander: {
-                shotDelay = 0.25f;
+                shotDelay = 0.35f;
                 shotPower = 2;
                 initialHitPoints = 3;
                 hitPoints = 3;
@@ -404,7 +516,7 @@ public partial class RoleBehavior : Node3D {
                 break;
             }
             case Role.Heavy: {
-                shotDelay = 0.35f;
+                shotDelay = 0.5f;
                 shotPower = 3;
                 initialHitPoints = 3;
                 hitPoints = 3;
@@ -422,7 +534,7 @@ public partial class RoleBehavior : Node3D {
                 break;
             }
             default: { // Role.Scout
-                shotDelay = 0.2f;
+                shotDelay = 0.3f;
                 shotPower = 1;
                 initialHitPoints = 1;
                 hitPoints = 1;
@@ -440,7 +552,7 @@ public partial class RoleBehavior : Node3D {
                 break;
             }
             case Role.Ammo: {
-                shotDelay = 0.2f;
+                shotDelay = 0.3f;
                 shotPower = 1;
                 initialHitPoints = 1;
                 hitPoints = 1;
@@ -458,7 +570,7 @@ public partial class RoleBehavior : Node3D {
                 break;
             }
             case Role.Medic: {
-                shotDelay = 0.2f;
+                shotDelay = 0.3f;
                 shotPower = 1;
                 initialHitPoints = 1;
                 hitPoints = 1;
@@ -476,13 +588,13 @@ public partial class RoleBehavior : Node3D {
                 break;
             }
         }
+
+        rapidFireEnabled = false;
     }
 
     private RoleBehavior RoleBehaviorFromMultiplayerId(long mId) {
         return GetNode<RoleBehavior>("/root/Scene/Player" + mId.ToString() + "/SM5Player/RoleBehavior");
     }
-
-    // only downed and respawned are implemented so far
 
     [Signal]
     public delegate void OnDownedEventHandler();

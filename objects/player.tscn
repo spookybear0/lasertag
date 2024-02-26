@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3 uid="uid://dipwkce3lur2i"]
+[gd_scene load_steps=14 format=3 uid="uid://c8q0iad1n20yy"]
 
 [ext_resource type="Script" path="res://scripts/Player.cs" id="1_pniju"]
 [ext_resource type="PackedScene" uid="uid://d00mmoichg0bj" path="res://assets/pistol.blend" id="3_0xi3j"]
@@ -208,7 +208,7 @@ script = ExtResource("1_pniju")
 
 [node name="Camera" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.68, -0.421)
-cull_mask = 1048571
+cull_mask = 1048573
 fov = 90.0
 
 [node name="Pistol" parent="Camera" instance=ExtResource("3_0xi3j")]
@@ -242,14 +242,14 @@ libraries = {
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.19543, 0)
 
 [node name="NameLabel" type="Label3D" parent="AboveHead"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.214, 0)
-layers = 5
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.03335e-05, 0.214, -0.00538898)
 billboard = 1
 text = "Name"
 font_size = 40
 
 [node name="RoleIcon" type="Sprite3D" parent="AboveHead"]
 transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, 0, 0, 0)
+layers = 3
 billboard = 1
 texture = ExtResource("5_j0ghm")
 

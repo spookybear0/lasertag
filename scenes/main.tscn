@@ -11,6 +11,7 @@
 background_mode = 1
 background_color = Color(0.6, 0.6, 0.6, 1)
 reflected_light_source = 2
+glow_enabled = true
 volumetric_fog_enabled = true
 volumetric_fog_density = 0.075
 volumetric_fog_albedo = Color(0.0980392, 0.0980392, 0.0980392, 1)
@@ -45,13 +46,13 @@ script = ExtResource("4_lw8gp")
 [node name="HudCanvas" parent="." instance=ExtResource("4_xk0gv")]
 
 [node name="Arena" parent="." instance=ExtResource("3_5h3ar")]
-transform = Transform3D(0.1, 0, 0, 0, 0.1, 0, 0, 0, 0.1, 0, 0, 0)
+transform = Transform3D(0.075, 0, 0, 0, 0.075, 0, 0, 0, 0.075, 0, 0, 0)
 
 [node name="RedBaseSpawn" type="Marker3D" parent="."]
-transform = Transform3D(-0.181189, -0.983448, 0, 0.983448, -0.181189, 0, 0, 0, 1, 10.7527, 5.48645, 19.8964)
+transform = Transform3D(-0.181189, -0.983448, 0, 0.983448, -0.181189, 0, 0, 0, 1, 9.57526, 5.48645, 16.3778)
 
 [node name="BlueBaseSpawn" type="Marker3D" parent="."]
-transform = Transform3D(-0.181189, -0.983448, 0, 0.983448, -0.181189, 0, 0, 0, 1, -11.8964, 5.63526, -18.8699)
+transform = Transform3D(-0.181189, -0.983448, 0, 0.983448, -0.181189, 0, 0, 0, 1, -9.13371, 5.63526, -14.367)
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1.19249e-08, 1, 0, -1, 1.19249e-08, 0, 15.0164, 0)

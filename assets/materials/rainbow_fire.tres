@@ -1,0 +1,10 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3 uid="uid://dgaqcb34r5enj"]
+
+[ext_resource type="Shader" path="res://assets/materials/rainbow_fire.gdshader" id="1_axm2v"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_axm2v")
+shader_parameter/strength = 0.75
+shader_parameter/speed = 0.5
+shader_parameter/angle = 90.0

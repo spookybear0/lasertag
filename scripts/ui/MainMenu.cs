@@ -47,6 +47,7 @@ public partial class MainMenu : Control {
         multiplayerManager.isServer = false;
         multiplayerManager.address = addressText.Text;
         multiplayerManager.port = portText.Text.ToInt();
+        GD.Print("setting playerName to " + nameText.Text);
         GameManager.Instance.playerName = nameText.Text;
 
         GetTree().ChangeSceneToPacked(mainScene);

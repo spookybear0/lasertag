@@ -2,10 +2,10 @@ using Godot;
 using System;
 
 public partial class Player : CharacterBody3D {
-	public const float speed = 6f;
-	public const float speedWhileJumping = 4f;
-	public const float jumpVelocity = 6f;
-	public float gravity = 20f;
+	public const float speed = 5f;
+	public const float speedWhileJumping = 3f;
+	public const float jumpVelocity = 5.5f;
+	public float gravity = 22f;
 	public float sensitivity = 1f;
 	public float shotDelay = 0.2f;
 
@@ -27,12 +27,15 @@ public partial class Player : CharacterBody3D {
 	private Sprite3D roleIcon;
 	private MeshInstance3D mesh;
 	private DirectionalLight3D flashlight;
+	private Timer rainbowTimer;
 
 	// materials
 	private Material earthMaterial;
 	private Material earthDownedMaterial;
 	private Material fireMaterial;
 	private Material fireDownedMaterial;
+	private Material fireNukeMaterial;
+	private Material earthNukeMaterial;
 
 	public override void _EnterTree() {
 		multiplayerId = Name.ToString().Replace("Player", "").ToInt();
@@ -60,6 +63,8 @@ public partial class Player : CharacterBody3D {
 
 		GameManager.Instance.players.Add(this);
 
+		sm5Player.roleBehavior.player = this;
+
 
 		sm5Player = GetNode<SM5Player>("SM5Player");
 		// lambda
@@ -77,6 +82,8 @@ public partial class Player : CharacterBody3D {
 		earthDownedMaterial = GD.Load<Material>("res://assets/materials/earth_downed.tres");
 		fireMaterial = GD.Load<Material>("res://assets/materials/fire.tres");
 		fireDownedMaterial = GD.Load<Material>("res://assets/materials/fire_downed.tres");
+		earthNukeMaterial = GD.Load<Material>("res://assets/materials/rainbow_earth.tres");
+		fireNukeMaterial = GD.Load<Material>("res://assets/materials/rainbow_fire.tres");
 
 		// laser stuff
 
@@ -92,6 +99,8 @@ public partial class Player : CharacterBody3D {
 		
 		setMouseCapture(false);
 
+        GD.Print("Player name LLL: " + GameManager.Instance.playerName);
+
 		if (!IsMultiplayerAuthority()) {
 			return;
 		}
@@ -99,6 +108,9 @@ public partial class Player : CharacterBody3D {
 		Position = GetNode<Marker3D>("/root/Scene/RedBaseSpawn").GlobalTransform.Origin;
 
 		GameManager.Instance.localPlayer = this;
+        GD.Print("Player name: " + GameManager.Instance.playerName);
+        playerName = GameManager.Instance.playerName;
+        nameLabel.Text = playerName;
 
 		// camera and cull mask
 		// allows us to not see text above our head
@@ -107,16 +119,14 @@ public partial class Player : CharacterBody3D {
 		camera = GetNode<Camera3D>("Camera");
 		camera.MakeCurrent();
 
-		// cull mask
-
-		nameLabel.SetLayerMaskValue(1, false);
-		nameLabel.SetLayerMaskValue(3, true);
-		roleIcon.SetLayerMaskValue(1, false);
-		roleIcon.SetLayerMaskValue(3, true);
-
 		// mouse capture
 
 		setMouseCapture(true);
+
+        // camera stuff for above head text
+
+        nameLabel.Layers = 2;
+        roleIcon.Layers = 2;
 	}
 
 	public void setMouseCapture(bool capture) {
@@ -323,5 +333,38 @@ public partial class Player : CharacterBody3D {
 		else if (sm5Player.team == Team.Earth) {
 			mesh.MaterialOverride = earthMaterial;
 		}	
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.Authority, CallLocal=true)]
+	public void StartNuking() {
+		if (sm5Player.team == Team.Fire) {
+			mesh.MaterialOverride = fireNukeMaterial;
+		}
+		else if (sm5Player.team == Team.Earth) {
+			mesh.MaterialOverride = earthNukeMaterial;
+		}
+	}
+
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer)]
+	public void OnNuked() { // getting nuked
+		rainbowTimer = new Timer();
+		rainbowTimer.WaitTime = 4f;
+		rainbowTimer.OneShot = true;
+		rainbowTimer.Connect("timeout", new Callable(this, "RainbowTimerTimeout"));
+		AddChild(rainbowTimer);
+		rainbowTimer.Start();
+
+		if (sm5Player.team == Team.Fire) {
+			mesh.MaterialOverride = fireNukeMaterial;
+		}
+		else if (sm5Player.team == Team.Earth) {
+			mesh.MaterialOverride = earthNukeMaterial;
+		}
+
+		sm5Player.roleBehavior.OnNuke();
+	}
+
+	public void RainbowTimerTimeout() {
+		Rpc("OnTeamUpdate", (int)sm5Player.team);
 	}
 }
